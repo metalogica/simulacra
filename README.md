@@ -63,6 +63,5 @@ A crash-safe generative agent runtime built from first principles.
 
 ### 3.1 Two Laws
 * Log law: anything that is content or happened goes in the log, forever, immutable. Reflections and plans are events, not projection rows.
-Projection law — anything in a projection must be fully re-derivable by replay(). If deleting projections loses information, you broke the design.
-
+* Projection law — anything in a projection must be fully re-derivable by replay(). If deleting projections loses information, you broke the design.
 * The side-effect law: the LLM call is a side effect. Before every call, look up the journal (llm_call_completed for this (agent_id, tick, purpose)); if found, use the journaled response. Replay moves forward and skips. No transactional rollbacks.

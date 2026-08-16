@@ -1,0 +1,30 @@
+{
+  "name": "Simulacra",
+  "version": "1.0.0",
+  "description": "A crash-safe generative agent runtime built from first principles.",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "db:drop": "rm -rf ./db",
+    "start": "node src/main.ts",
+    "typecheck": "tsc"
+  },
+  "keywords": [
+    "agent-harness"
+  ],
+  "author": "",
+  "license": "MIT",
+  "packageManager": "pnpm@10.30.2",
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.2.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}
