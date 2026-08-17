@@ -3,6 +3,8 @@ import {
   freshDb,
   INVALID_EVENT,
   KLAUS_OBSERVATION,
+  LLM_CALL_COMPLETED,
+  LLM_CALL_FAILED,
   OBSERVATION,
   REFLECTION,
   type Harness,
@@ -115,5 +117,87 @@ describe("read", () => {
 
   it("returns nothing for an unknown agent", () => {
     expect(h.store.read({ agentId: "nobody" })).toHaveLength(0);
+  });
+});
+
+// ─── M1: journal events + read filters ───────────────────────────────────────
+// read() grows optional `tick` and `type` filters (same `@param IS NULL OR`
+// pattern) — the journal lookup is `read({ agentId, tick, type })` plus a
+// purpose match in JS, since purpose lives inside the payload column.
+
+describe("journal events through the store (M1)", () => {
+  it("round-trips an llm_call_completed losslessly", () => {
+    h.store.append(LLM_CALL_COMPLETED);
+    expect(h.store.read()[0]).toMatchObject(LLM_CALL_COMPLETED);
+  });
+
+  it("round-trips an llm_call_failed losslessly", () => {
+    h.store.append(LLM_CALL_FAILED);
+    expect(h.store.read()[0]).toMatchObject(LLM_CALL_FAILED);
+  });
+
+  it("round-trips a nested JSON result", () => {
+    h.store.append({
+      ...LLM_CALL_COMPLETED,
+      result: { a: [1, "x", { b: null }] },
+    });
+    const event = h.store.read()[0];
+    if (event?.type !== "llm_call_completed") {
+      throw new Error("expected an llm_call_completed");
+    }
+    expect(event.result).toEqual({ a: [1, "x", { b: null }] });
+  });
+
+  it("validates journal events on the way in", () => {
+    expect(() =>
+      h.store.append({ ...LLM_CALL_COMPLETED, attempts: 0 }),
+    ).toThrow();
+    expect(h.count()).toBe(0);
+  });
+});
+
+describe("read filters: tick and type (M1)", () => {
+  beforeEach(() => {
+    h.store.append(OBSERVATION); // maria, tick 0
+    h.store.append(KLAUS_OBSERVATION); // klaus, tick 0
+    h.store.append(LLM_CALL_COMPLETED); // maria, tick 2
+    h.store.append(LLM_CALL_FAILED); // maria, tick 3
+  });
+
+  it("filters by type", () => {
+    const events = h.store.read({ type: "llm_call_completed" });
+    expect(events).toHaveLength(1);
+    expect(events[0]!.type).toBe("llm_call_completed");
+  });
+
+  it("filters by tick", () => {
+    expect(h.store.read({ tick: 0 })).toHaveLength(2);
+    expect(h.store.read({ tick: 3 })).toHaveLength(1);
+  });
+
+  it("treats tick 0 as a filter, not as absent", () => {
+    // The `@param IS NULL OR` pattern must receive null for "no filter" —
+    // a falsy-check bug here silently returns the whole log.
+    const events = h.store.read({ tick: 0 });
+    expect(events.every((event) => event.tick === 0)).toBe(true);
+  });
+
+  it("combines agentId, tick and type", () => {
+    const events = h.store.read({
+      agentId: "maria",
+      tick: 2,
+      type: "llm_call_completed",
+    });
+    expect(events).toHaveLength(1);
+  });
+
+  it("returns nothing when the combination matches no row", () => {
+    expect(
+      h.store.read({ agentId: "klaus", type: "llm_call_completed" }),
+    ).toHaveLength(0);
+  });
+
+  it("still returns everything unfiltered", () => {
+    expect(h.store.read()).toHaveLength(4);
   });
 });

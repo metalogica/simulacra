@@ -3,6 +3,8 @@ import { replay, toMemoryRow } from "../src/projection.ts";
 import {
   freshDb,
   KLAUS_OBSERVATION,
+  LLM_CALL_COMPLETED,
+  LLM_CALL_FAILED,
   OBSERVATION,
   REFLECTION,
   observations,
@@ -83,6 +85,66 @@ describe("replay", () => {
     replay(h.db);
     replay(h.db);
     expect(h.count()).toBe(before);
+  });
+});
+
+// ─── M1: journal events are not memories ─────────────────────────────────────
+// The journal is replay infrastructure, not agent experience — an agent never
+// "remembers" its own API calls. Contract change: toMemoryRow returns
+// `MemoryRow | null`, and replay skips the nulls.
+
+describe("journal events in the projection (M1)", () => {
+  it("toMemoryRow returns null for an llm_call_completed", () => {
+    h.store.append(LLM_CALL_COMPLETED);
+    const [stored] = h.store.read();
+    expect(toMemoryRow(stored!)).toBeNull();
+  });
+
+  it("toMemoryRow returns null for an llm_call_failed", () => {
+    h.store.append(LLM_CALL_FAILED);
+    const [stored] = h.store.read();
+    expect(toMemoryRow(stored!)).toBeNull();
+  });
+
+  it("replay projects no rows from a journal-only log", () => {
+    h.store.appendMany([LLM_CALL_COMPLETED, LLM_CALL_FAILED]);
+    replay(h.db);
+    expect(h.memories()).toHaveLength(0);
+  });
+
+  it("replay of a mixed log projects only the memories", () => {
+    h.store.appendMany([
+      OBSERVATION,
+      LLM_CALL_COMPLETED,
+      REFLECTION,
+      LLM_CALL_FAILED,
+    ]);
+    replay(h.db);
+
+    const rows = h.memories();
+    expect(rows).toHaveLength(2);
+    expect(rows.map((row) => row.content)).toEqual([
+      OBSERVATION.content,
+      REFLECTION.content,
+    ]);
+  });
+
+  // The Projection Law survives M1: acceptance test 1 rerun over a mixed log.
+  it("rebuilds byte-identically after a wipe, journal events present", () => {
+    h.store.appendMany([
+      OBSERVATION,
+      LLM_CALL_COMPLETED,
+      KLAUS_OBSERVATION,
+      LLM_CALL_FAILED,
+      REFLECTION,
+    ]);
+    replay(h.db);
+    const before = h.memories();
+    expect(before).toHaveLength(3);
+
+    h.db.prepare("DELETE FROM projection_memories").run();
+    replay(h.db);
+    expect(h.memories()).toEqual(before);
   });
 });
 

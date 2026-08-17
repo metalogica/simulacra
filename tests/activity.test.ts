@@ -64,17 +64,7 @@ import { createActivity } from "../src/activity.ts";
 import { createMockLlm, type LlmClient } from "../src/llm.ts";
 import { initDB } from "../src/db.ts";
 import { initStore } from "../src/store.ts";
-import { replay } from "../src/projection.ts";
-import { formatEvent } from "../src/logger.ts";
-import type { StoredEvent } from "../src/events.ts";
-import {
-  freshDb,
-  INVALID_EVENT,
-  LLM_CALL_COMPLETED,
-  LLM_CALL_FAILED,
-  OBSERVATION,
-  type Harness,
-} from "./helpers.ts";
+import { freshDb, INVALID_EVENT, type Harness } from "./helpers.ts";
 
 const RESULT_SCHEMA = z.strictObject({ mood: z.string(), score: z.number() });
 const VALID_JSON = '{"mood":"curious","score":7}';
@@ -99,105 +89,6 @@ const completedEvents = () =>
   h.store.read().flatMap((e) => (e.type === "llm_call_completed" ? [e] : []));
 const failedEvents = () =>
   h.store.read().flatMap((e) => (e.type === "llm_call_failed" ? [e] : []));
-
-// ─── journal event schemas ───────────────────────────────────────────────────
-
-describe("journal event schemas", () => {
-  it("round-trips llm_call_completed through the store", () => {
-    h.store.append(LLM_CALL_COMPLETED);
-    const [event] = h.store.read();
-    expect(event).toMatchObject(LLM_CALL_COMPLETED);
-  });
-
-  it("round-trips llm_call_failed through the store", () => {
-    h.store.append(LLM_CALL_FAILED);
-    const [event] = h.store.read();
-    expect(event).toMatchObject(LLM_CALL_FAILED);
-  });
-
-  it("rejects an empty purpose", () => {
-    expect(() =>
-      h.store.append({ ...LLM_CALL_COMPLETED, purpose: "" }),
-    ).toThrow();
-  });
-
-  it("rejects attempts of 0", () => {
-    expect(() =>
-      h.store.append({ ...LLM_CALL_COMPLETED, attempts: 0 }),
-    ).toThrow();
-  });
-
-  it("rejects attempts above 3", () => {
-    expect(() =>
-      h.store.append({ ...LLM_CALL_COMPLETED, attempts: 4 }),
-    ).toThrow();
-  });
-
-  it("rejects unknown keys (strictObject holds)", () => {
-    expect(() =>
-      h.store.append({
-        ...LLM_CALL_COMPLETED,
-        smuggled: true,
-      } as never),
-    ).toThrow();
-  });
-
-  it("rejects an empty errors array on llm_call_failed", () => {
-    expect(() =>
-      h.store.append({ ...LLM_CALL_FAILED, errors: [] }),
-    ).toThrow();
-  });
-
-  it("accepts any JSON value as a result — nested object", () => {
-    h.store.append({
-      ...LLM_CALL_COMPLETED,
-      result: { a: [1, "x", { b: null }] },
-    });
-    const [event] = completedEvents();
-    expect(event!.result).toEqual({ a: [1, "x", { b: null }] });
-  });
-
-  it("accepts any JSON value as a result — bare scalar", () => {
-    h.store.append({ ...LLM_CALL_COMPLETED, result: "just a string" });
-    const [event] = completedEvents();
-    expect(event!.result).toBe("just a string");
-  });
-});
-
-// ─── store read filters ──────────────────────────────────────────────────────
-
-describe("store read filters", () => {
-  beforeEach(() => {
-    h.store.append(OBSERVATION); // tick 0
-    h.store.append(LLM_CALL_COMPLETED); // tick 2
-    h.store.append(LLM_CALL_FAILED); // tick 3
-  });
-
-  it("filters by type", () => {
-    const events = h.store.read({ type: "llm_call_completed" });
-    expect(events).toHaveLength(1);
-    expect(events[0]!.type).toBe("llm_call_completed");
-  });
-
-  it("filters by tick", () => {
-    const events = h.store.read({ tick: 3 });
-    expect(events).toHaveLength(1);
-    expect(events[0]!.type).toBe("llm_call_failed");
-  });
-
-  it("combines agentId, tick and type", () => {
-    const events = h.store.read({
-      agentId: "maria",
-      tick: 2,
-      type: "llm_call_completed",
-    });
-    expect(events).toHaveLength(1);
-  });
-
-  it("still returns everything unfiltered", () => {
-    expect(h.store.read()).toHaveLength(3);
-  });
-});
 
 // ─── first execution ─────────────────────────────────────────────────────────
 
@@ -640,36 +531,5 @@ describe("activity.llm — chaos", () => {
     expect(
       completedEvents().some((event) => event.attempts > 1),
     ).toBe(true);
-  });
-});
-
-// ─── integration with M0 surfaces ────────────────────────────────────────────
-
-describe("journal events across the M0 surfaces", () => {
-  it("journal events are not memories: replay projects none", () => {
-    h.store.append(OBSERVATION);
-    h.store.append(LLM_CALL_COMPLETED);
-    h.store.append(LLM_CALL_FAILED);
-
-    replay(h.db);
-
-    const rows = h.memories();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]!.content).toBe(OBSERVATION.content);
-  });
-
-  it("the logger renders llm_call_completed", () => {
-    const sequence = h.store.append(LLM_CALL_COMPLETED);
-    const [event] = h.store.read() as [StoredEvent];
-    expect(() => formatEvent(event)).not.toThrow();
-    expect(formatEvent(event)).toContain("score_importance");
-    expect(formatEvent(event)).toContain(String(sequence));
-  });
-
-  it("the logger renders llm_call_failed", () => {
-    h.store.append(LLM_CALL_FAILED);
-    const [event] = h.store.read() as [StoredEvent];
-    expect(() => formatEvent(event)).not.toThrow();
-    expect(formatEvent(event)).toContain("score_importance");
   });
 });

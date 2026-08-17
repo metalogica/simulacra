@@ -119,3 +119,49 @@ describe("formatEvent", () => {
     expect(formatEvent(OBSERVATION)).not.toContain("\n");
   });
 });
+
+// ─── M1: journal events ──────────────────────────────────────────────────────
+
+const LLM_COMPLETED: StoredEvent = {
+  type: "llm_call_completed",
+  agentId: "maria",
+  tick: 2,
+  purpose: "score_importance",
+  prompt: "Rate the importance of this observation from 1 to 10.",
+  result: { score: 7 },
+  attempts: 1,
+  sequence: 44,
+  createdAt: 1_786_914_071_600,
+};
+
+const LLM_FAILED: StoredEvent = {
+  type: "llm_call_failed",
+  agentId: "maria",
+  tick: 3,
+  purpose: "score_importance",
+  prompt: "Rate the importance of this observation from 1 to 10.",
+  errors: ["Unexpected token 'n'", "Unexpected token 'n'", "Unexpected token 'n'"],
+  attempts: 3,
+  sequence: 45,
+  createdAt: 1_786_914_071_700,
+};
+
+describe("formatEvent — journal events (M1)", () => {
+  it("renders an llm_call_completed with its purpose", () => {
+    const line = stripAnsi(formatEvent(LLM_COMPLETED));
+    expect(line).toContain("llm_call_completed");
+    expect(line).toContain("score_importance");
+  });
+
+  it("renders an llm_call_failed with its purpose", () => {
+    const line = stripAnsi(formatEvent(LLM_FAILED));
+    expect(line).toContain("llm_call_failed");
+    expect(line).toContain("score_importance");
+  });
+
+  it("keeps journal lines to a single line", () => {
+    // Multi-line errors or pretty-printed results would wreck the tail view.
+    expect(formatEvent(LLM_COMPLETED)).not.toContain("\n");
+    expect(formatEvent(LLM_FAILED)).not.toContain("\n");
+  });
+});
