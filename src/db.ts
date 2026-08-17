@@ -95,7 +95,7 @@ export const initDB = (
         agent_id TEXT NOT NULL,
         content TEXT NOT NULL,
         importance INTEGER NOT NULL,
-        last_retrieved_t INTEGER NOT NULL
+        last_retrieved_tick INTEGER
       ) STRICT;
     `,
     ).run();
