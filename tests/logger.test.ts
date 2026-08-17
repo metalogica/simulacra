@@ -89,8 +89,18 @@ describe("formatEvent", () => {
 
   it("colours the line and resets afterwards", () => {
     const line = formatEvent(OBSERVATION);
-    expect(line).toMatch(/\x1b\[\d+m/);
+    // ANCHORED on purpose. An unanchored /\x1b\[\d+m/ is satisfied by the
+    // trailing reset code, so a malformed *opening* escape (missing the "m"
+    // after the colour number) slips through. Assert the line STARTS with a
+    // well-formed SGR sequence.
+    expect(line).toMatch(/^\x1b\[\d+m/);
     expect(line.endsWith("\x1b[0m")).toBe(true);
+  });
+
+  it("emits no stray escape characters in the body", () => {
+    // stripAnsi only removes well-formed sequences. Any ESC left over after
+    // stripping means one of them was malformed.
+    expect(stripAnsi(formatEvent(OBSERVATION))).not.toContain("\x1b");
   });
 
   it("gives different agents different colours", () => {

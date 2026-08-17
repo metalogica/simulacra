@@ -9,16 +9,14 @@ export const DEFAULT_DB_PATH = path.join(
 );
 
 interface InitDBParams {
-  dbPath: string;
+  dbPath?: string;
   verbose?: boolean;
   readOnly?: boolean;
 }
 
-export const initDB = ({
-  dbPath = DEFAULT_DB_PATH,
-  verbose,
-  readOnly,
-}: InitDBParams): BetterSqlite3.Database => {
+export const initDB = (input: InitDBParams = {}): BetterSqlite3.Database => {
+  const { dbPath = DEFAULT_DB_PATH, verbose = false, readOnly = false } = input;
+
   if (!path.isAbsolute(dbPath)) {
     throw new Error(`DB error: received invalid path ${dbPath}`);
   }
@@ -27,7 +25,7 @@ export const initDB = ({
 
   const db = new Database(dbPath, {
     verbose: verbose ? console.log : undefined,
-    readonly: readOnly,
+    readonly: Boolean(readOnly),
   });
 
   db.pragma("journal_mode = WAL");

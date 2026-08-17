@@ -9,7 +9,8 @@
   "scripts": {
     "db:drop": "rm -rf ./db",
     "start": "node src/main.ts",
-    "test": "vitest",
+    "tail": "node src/tail.ts",
+    "test": "vitest run",
     "typecheck": "tsc"
   },
   "keywords": [
