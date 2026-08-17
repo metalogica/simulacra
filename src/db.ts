@@ -3,15 +3,22 @@ import type BetterSqlite3 from "better-sqlite3";
 import path from "node:path";
 import fs from "node:fs";
 
-const DEFAULT_DB_PATH = path.join(
+export const DEFAULT_DB_PATH = path.join(
   import.meta.dirname,
   "../db/simulacra.sqlite3",
 );
 
-export const initDB = (
-  dbPath: string = DEFAULT_DB_PATH,
-  verbose = false,
-): BetterSqlite3.Database => {
+interface InitDBParams {
+  dbPath: string;
+  verbose?: boolean;
+  readOnly?: boolean;
+}
+
+export const initDB = ({
+  dbPath = DEFAULT_DB_PATH,
+  verbose,
+  readOnly,
+}: InitDBParams): BetterSqlite3.Database => {
   if (!path.isAbsolute(dbPath)) {
     throw new Error(`DB error: received invalid path ${dbPath}`);
   }
@@ -20,6 +27,7 @@ export const initDB = (
 
   const db = new Database(dbPath, {
     verbose: verbose ? console.log : undefined,
+    readonly: readOnly,
   });
 
   db.pragma("journal_mode = WAL");

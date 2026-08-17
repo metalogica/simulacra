@@ -46,7 +46,7 @@ export interface Store {
   read: (input?: { agentId?: string; afterSequence?: number }) => StoredEvent[];
 }
 
-export const createStore = (db: BetterSqlite3.Database): Store => {
+export const initStore = (db: BetterSqlite3.Database): Store => {
   const writeQuery = db.prepare<InsertParams>(/*sql*/ `
     INSERT INTO events (tick, agent_id, type, payload, created_at)
     VALUES (@tick, @agentId, @type, @payload, @createdAt)

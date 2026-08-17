@@ -4,7 +4,7 @@
  */
 
 import type { StoredEvent } from "./events.ts";
-import { createStore } from "./store.ts";
+import { initStore } from "./store.ts";
 import type BetterSqlite3 from "better-sqlite3";
 
 interface MemoryRow {
@@ -59,7 +59,7 @@ export const replay = (
 ): void => {
   const agentId = params?.agentId;
 
-  const store = createStore(db);
+  const store = initStore(db);
 
   const deleteQuery = db.prepare<DeleteParams>(/*sql*/ `
     DELETE FROM projection_memories
