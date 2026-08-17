@@ -117,6 +117,30 @@ export const INVALID_EVENT = {
   importance: 99,
 } as unknown as AgentEvent;
 
+export const LLM_CALL_COMPLETED: AgentEvent = {
+  type: "llm_call_completed",
+  agentId: "maria",
+  tick: 2,
+  purpose: "score_importance",
+  prompt: "Rate the importance of this observation from 1 to 10.",
+  result: { score: 7 },
+  attempts: 1,
+};
+
+export const LLM_CALL_FAILED: AgentEvent = {
+  type: "llm_call_failed",
+  agentId: "maria",
+  tick: 3,
+  purpose: "score_importance",
+  prompt: "Rate the importance of this observation from 1 to 10.",
+  errors: [
+    "Unexpected token 'n' in JSON",
+    "Unexpected token 'n' in JSON",
+    "Unexpected token 'n' in JSON",
+  ],
+  attempts: 3,
+};
+
 /** `n` observations for the same agent, ticks ascending. */
 export const observations = (n: number, agentId = "maria"): AgentEvent[] =>
   Array.from({ length: n }, (_unused, i) => ({
