@@ -11,7 +11,7 @@
  *   calls(): ReadonlyArray<{ purpose: string; prompt: string }>;
  * }
  *
- * export const createMockLlm: (input: {
+ * export const createMockLLM: (input: {
  *   // Canned model output keyed by purpose. A string is returned on every
  *   // call; an array is served one element per call, sticking on the last.
  *   responses: Record<string, string | string[]>;
@@ -28,42 +28,48 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { createMockLlm } from "../src/llm.ts";
+import { createMockLLM } from "../src/llm.ts";
 
 const VALID_JSON = '{"mood":"curious","score":7}';
 
 describe("canned responses", () => {
   it("returns the canned string for a known purpose", async () => {
-    const mock = createMockLlm({ responses: { greet: VALID_JSON } });
+    const mock = createMockLLM({ responses: { greet: VALID_JSON } });
     await expect(
       mock.complete({ purpose: "greet", prompt: "say hi" }),
     ).resolves.toBe(VALID_JSON);
   });
 
   it("returns the same string on every call", async () => {
-    const mock = createMockLlm({ responses: { greet: VALID_JSON } });
+    const mock = createMockLLM({ responses: { greet: VALID_JSON } });
     const first = await mock.complete({ purpose: "greet", prompt: "a" });
     const second = await mock.complete({ purpose: "greet", prompt: "b" });
     expect(second).toBe(first);
   });
 
   it("serves an array response one element per call, in order", async () => {
-    const mock = createMockLlm({
+    const mock = createMockLLM({
       responses: { greet: ["first", "second", "third"] },
     });
-    expect(await mock.complete({ purpose: "greet", prompt: "p" })).toBe("first");
-    expect(await mock.complete({ purpose: "greet", prompt: "p" })).toBe("second");
-    expect(await mock.complete({ purpose: "greet", prompt: "p" })).toBe("third");
+    expect(await mock.complete({ purpose: "greet", prompt: "p" })).toBe(
+      "first",
+    );
+    expect(await mock.complete({ purpose: "greet", prompt: "p" })).toBe(
+      "second",
+    );
+    expect(await mock.complete({ purpose: "greet", prompt: "p" })).toBe(
+      "third",
+    );
   });
 
   it("sticks on the last element once an array is exhausted", async () => {
-    const mock = createMockLlm({ responses: { greet: ["only"] } });
+    const mock = createMockLLM({ responses: { greet: ["only"] } });
     await mock.complete({ purpose: "greet", prompt: "p" });
     expect(await mock.complete({ purpose: "greet", prompt: "p" })).toBe("only");
   });
 
   it("tracks array position per purpose, not globally", async () => {
-    const mock = createMockLlm({
+    const mock = createMockLLM({
       responses: { a: ["a1", "a2"], b: ["b1", "b2"] },
     });
     await mock.complete({ purpose: "a", prompt: "p" });
@@ -71,7 +77,7 @@ describe("canned responses", () => {
   });
 
   it("rejects on an unknown purpose", async () => {
-    const mock = createMockLlm({ responses: {} });
+    const mock = createMockLLM({ responses: {} });
     await expect(
       mock.complete({ purpose: "missing", prompt: "p" }),
     ).rejects.toThrow();
@@ -80,7 +86,7 @@ describe("canned responses", () => {
 
 describe("call recording", () => {
   it("records every call with purpose and prompt, in order", async () => {
-    const mock = createMockLlm({
+    const mock = createMockLLM({
       responses: { a: VALID_JSON, b: VALID_JSON },
     });
     await mock.complete({ purpose: "a", prompt: "first prompt" });
@@ -92,7 +98,7 @@ describe("call recording", () => {
   });
 
   it("records chaos calls too", async () => {
-    const mock = createMockLlm({
+    const mock = createMockLLM({
       responses: { a: VALID_JSON },
       chaosRate: 1,
     });
@@ -103,7 +109,7 @@ describe("call recording", () => {
 
 describe("chaos mode", () => {
   it("never corrupts output when chaosRate is 0 (the default)", async () => {
-    const mock = createMockLlm({ responses: { a: VALID_JSON } });
+    const mock = createMockLLM({ responses: { a: VALID_JSON } });
     for (let i = 0; i < 100; i++) {
       const output = await mock.complete({ purpose: "a", prompt: "p" });
       expect(() => JSON.parse(output)).not.toThrow();
@@ -111,7 +117,7 @@ describe("chaos mode", () => {
   });
 
   it("always returns invalid JSON when chaosRate is 1", async () => {
-    const mock = createMockLlm({ responses: { a: VALID_JSON }, chaosRate: 1 });
+    const mock = createMockLLM({ responses: { a: VALID_JSON }, chaosRate: 1 });
     for (let i = 0; i < 100; i++) {
       const output = await mock.complete({ purpose: "a", prompt: "p" });
       expect(() => JSON.parse(output)).toThrow();
@@ -119,7 +125,7 @@ describe("chaos mode", () => {
   });
 
   it("corrupts roughly chaosRate of calls at 0.2", async () => {
-    const mock = createMockLlm({
+    const mock = createMockLLM({
       responses: { a: VALID_JSON },
       chaosRate: 0.2,
       seed: 42,
@@ -139,7 +145,7 @@ describe("chaos mode", () => {
 
   it("is deterministic: same seed produces the same output sequence", async () => {
     const run = async (seed: number) => {
-      const mock = createMockLlm({
+      const mock = createMockLLM({
         responses: { a: VALID_JSON },
         chaosRate: 0.5,
         seed,
@@ -156,7 +162,7 @@ describe("chaos mode", () => {
 
   it("varies across seeds", async () => {
     const run = async (seed: number) => {
-      const mock = createMockLlm({
+      const mock = createMockLLM({
         responses: { a: VALID_JSON },
         chaosRate: 0.5,
         seed,
