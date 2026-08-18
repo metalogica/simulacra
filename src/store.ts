@@ -27,9 +27,11 @@ interface EventRow {
   type: string;
 }
 
-interface ReadParams {
+interface DbReadParams {
   afterSequence: number | null;
   agentId: string | null;
+  type: string | null;
+  tick: number | null;
 }
 
 interface InsertParams {
@@ -40,10 +42,17 @@ interface InsertParams {
   createdAt: number;
 }
 
+interface StoreReadParams {
+  agentId?: string;
+  afterSequence?: number;
+  type?: string;
+  tick?: number;
+}
+
 export interface Store {
   append: (event: AgentEvent) => number;
   appendMany: (events: AgentEvent[]) => number[];
-  read: (input?: { agentId?: string; afterSequence?: number }) => StoredEvent[];
+  read: (input?: StoreReadParams) => StoredEvent[];
 }
 
 export const initStore = (db: BetterSqlite3.Database): Store => {
@@ -52,7 +61,7 @@ export const initStore = (db: BetterSqlite3.Database): Store => {
     VALUES (@tick, @agentId, @type, @payload, @createdAt)
   `);
 
-  const readQuery = db.prepare<[ReadParams], EventRow>(/*sql*/ `
+  const readQuery = db.prepare<[DbReadParams], EventRow>(/*sql*/ `
     SELECT sequence, tick, agent_id, type, payload, created_at
     FROM events
     WHERE (
@@ -61,6 +70,12 @@ export const initStore = (db: BetterSqlite3.Database): Store => {
     ) AND (
       @afterSequence IS NULL OR
       sequence > @afterSequence
+    ) AND (
+      @type IS NULL OR
+      type = @type
+    ) AND (
+      @tick IS NULL OR
+      tick = @tick
     )
     ORDER BY sequence
   `);
@@ -135,16 +150,17 @@ export const initStore = (db: BetterSqlite3.Database): Store => {
     return sequences;
   };
 
-  const read = (input?: {
-    afterSequence?: number;
-    agentId?: string;
-  }): StoredEvent[] => {
+  const read = (input?: StoreReadParams): StoredEvent[] => {
     const afterSequence = input?.afterSequence ?? null;
     const agentId = input?.agentId ?? null;
+    const tick = input?.tick ?? null;
+    const type = input?.type ?? null;
 
     const rows = readQuery.all({
       afterSequence,
       agentId,
+      tick,
+      type,
     });
 
     const formattedRows = rows.map(fromRow);
