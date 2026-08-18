@@ -65,6 +65,20 @@ export const formatEvent = (storedEvent: StoredEvent) => {
         " | Pointer Sequences: " +
         storedEvent.pointerSequences.join(", ");
       break;
+    case "llm_call_completed":
+      body =
+        storedEvent.attempts +
+        storedEvent.prompt +
+        storedEvent.purpose +
+        JSON.stringify(storedEvent.result);
+      break;
+    case "llm_call_failed":
+      body =
+        storedEvent.attempts +
+        storedEvent.prompt +
+        storedEvent.purpose +
+        JSON.stringify(storedEvent.errors);
+      break;
     default:
       storedEvent satisfies never;
       throw new Error(`Logger: Unhandled event ${JSON.stringify(storedEvent)}`);
