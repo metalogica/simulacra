@@ -36,7 +36,7 @@ describe("toMemoryRow — the pure reducer", () => {
   it("leaves last_retrieved_tick null for a fresh memory", () => {
     h.store.append(REFLECTION);
     const [stored] = h.store.read();
-    expect(toMemoryRow(stored!).last_retrieved_tick).toBeNull();
+    expect(toMemoryRow(stored!)?.last_retrieved_tick).toBeNull();
   });
 
   it("is pure — it does not write to the database", () => {

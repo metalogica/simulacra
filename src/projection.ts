@@ -27,7 +27,7 @@ interface DeleteParams {
   agent_id: string | null;
 }
 
-export const toMemoryRow = (storeEvent: StoredEvent): MemoryRow => {
+export const toMemoryRow = (storeEvent: StoredEvent): MemoryRow | null => {
   switch (storeEvent.type) {
     case "observation":
       return {
@@ -45,6 +45,10 @@ export const toMemoryRow = (storeEvent: StoredEvent): MemoryRow => {
         last_retrieved_tick: null,
         sequence: storeEvent.sequence,
       };
+    case "llm_call_completed":
+      return null;
+    case "llm_call_failed":
+      return null;
     default:
       storeEvent satisfies never;
       throw new Error(
@@ -79,6 +83,10 @@ export const replay = (
     const storeEvents = store.read(agentId ? { agentId } : undefined);
     for (const storeEvent of storeEvents) {
       const row = toMemoryRow(storeEvent);
+
+      if (!row) {
+        continue;
+      }
 
       insertQuery.run(row);
     }

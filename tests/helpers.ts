@@ -83,30 +83,30 @@ export const emptyDbPath = (): { dbPath: string; cleanup: () => void } => {
 
 // ─── fixtures ────────────────────────────────────────────────────────────────
 
-export const OBSERVATION: AgentEvent = {
+export const OBSERVATION = {
   type: "observation",
   agentId: "maria",
   tick: 0,
   content: "Klaus is reading alone in the cafe",
   importance: 4,
-};
+} satisfies AgentEvent;
 
-export const REFLECTION: AgentEvent = {
+export const REFLECTION = {
   type: "reflection",
   agentId: "maria",
   tick: 1,
   content: "Klaus spends most of his mornings by himself",
   importance: 7,
   pointerSequences: [1],
-};
+} satisfies AgentEvent;
 
-export const KLAUS_OBSERVATION: AgentEvent = {
+export const KLAUS_OBSERVATION = {
   type: "observation",
   agentId: "klaus",
   tick: 0,
   content: "Maria walked past the window",
   importance: 3,
-};
+} satisfies AgentEvent;
 
 /** Deliberately invalid — importance is outside the 1–10 scale. */
 export const INVALID_EVENT = {
@@ -117,7 +117,7 @@ export const INVALID_EVENT = {
   importance: 99,
 } as unknown as AgentEvent;
 
-export const LLM_CALL_COMPLETED: AgentEvent = {
+export const LLM_CALL_COMPLETED = {
   type: "llm_call_completed",
   agentId: "maria",
   tick: 2,
@@ -125,9 +125,9 @@ export const LLM_CALL_COMPLETED: AgentEvent = {
   prompt: "Rate the importance of this observation from 1 to 10.",
   result: { score: 7 },
   attempts: 1,
-};
+} satisfies AgentEvent;
 
-export const LLM_CALL_FAILED: AgentEvent = {
+export const LLM_CALL_FAILED = {
   type: "llm_call_failed",
   agentId: "maria",
   tick: 3,
@@ -139,7 +139,7 @@ export const LLM_CALL_FAILED: AgentEvent = {
     "Unexpected token 'n' in JSON",
   ],
   attempts: 3,
-};
+} satisfies AgentEvent;
 
 /** `n` observations for the same agent, ticks ascending. */
 export const observations = (n: number, agentId = "maria"): AgentEvent[] =>

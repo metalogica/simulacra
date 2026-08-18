@@ -30,7 +30,7 @@ interface EventRow {
 interface DbReadParams {
   afterSequence: number | null;
   agentId: string | null;
-  type: string | null;
+  type: AgentEvent["type"] | null;
   tick: number | null;
 }
 
@@ -45,7 +45,7 @@ interface InsertParams {
 interface StoreReadParams {
   agentId?: string;
   afterSequence?: number;
-  type?: string;
+  type?: AgentEvent["type"];
   tick?: number;
 }
 
