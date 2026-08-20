@@ -61,7 +61,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { createActivity } from "../src/activity.ts";
-import { createMockLlm, type LlmClient } from "../src/llm.ts";
+import { createMockLLM, type LlmClient } from "../src/llm.ts";
 import { initDB } from "../src/db.ts";
 import { initStore } from "../src/store.ts";
 import { freshDb, INVALID_EVENT, type Harness } from "./helpers.ts";
@@ -94,14 +94,14 @@ const failedEvents = () =>
 
 describe("activity.llm — first execution", () => {
   it("calls the model exactly once on clean success", async () => {
-    const mock = createMockLlm({ responses: { assess_mood: VALID_JSON } });
+    const mock = createMockLLM({ responses: { assess_mood: VALID_JSON } });
     const activity = createActivity({ store: h.store, llm: mock });
     await activity.llm(BASE_PARAMS);
     expect(mock.calls()).toHaveLength(1);
   });
 
   it("passes purpose and prompt through to the model", async () => {
-    const mock = createMockLlm({ responses: { assess_mood: VALID_JSON } });
+    const mock = createMockLLM({ responses: { assess_mood: VALID_JSON } });
     const activity = createActivity({ store: h.store, llm: mock });
     await activity.llm(BASE_PARAMS);
     expect(mock.calls()[0]).toEqual({
@@ -111,7 +111,7 @@ describe("activity.llm — first execution", () => {
   });
 
   it("returns the schema-parsed value", async () => {
-    const mock = createMockLlm({ responses: { assess_mood: VALID_JSON } });
+    const mock = createMockLLM({ responses: { assess_mood: VALID_JSON } });
     const activity = createActivity({ store: h.store, llm: mock });
     const result = await activity.llm(BASE_PARAMS);
     expect(result).toMatchObject({
@@ -122,7 +122,7 @@ describe("activity.llm — first execution", () => {
   });
 
   it("appends llm_call_completed with the key, prompt, result and attempts", async () => {
-    const mock = createMockLlm({ responses: { assess_mood: VALID_JSON } });
+    const mock = createMockLLM({ responses: { assess_mood: VALID_JSON } });
     const activity = createActivity({ store: h.store, llm: mock });
     await activity.llm(BASE_PARAMS);
 
@@ -138,7 +138,7 @@ describe("activity.llm — first execution", () => {
   });
 
   it("returns the journal event's sequence", async () => {
-    const mock = createMockLlm({ responses: { assess_mood: VALID_JSON } });
+    const mock = createMockLLM({ responses: { assess_mood: VALID_JSON } });
     const activity = createActivity({ store: h.store, llm: mock });
     const result = await activity.llm(BASE_PARAMS);
     expect(result.sequence).toBe(completedEvents()[0]!.sequence);
@@ -149,7 +149,7 @@ describe("activity.llm — first execution", () => {
 
 describe("activity.llm — journal replay", () => {
   it("makes no API call on a journal hit", async () => {
-    const mock = createMockLlm({ responses: { assess_mood: VALID_JSON } });
+    const mock = createMockLLM({ responses: { assess_mood: VALID_JSON } });
     const activity = createActivity({ store: h.store, llm: mock });
     await activity.llm(BASE_PARAMS);
     await activity.llm(BASE_PARAMS);
@@ -158,7 +158,7 @@ describe("activity.llm — journal replay", () => {
 
   // M1 acceptance test 3.
   it("returns a byte-identical result on a journal hit", async () => {
-    const mock = createMockLlm({ responses: { assess_mood: VALID_JSON } });
+    const mock = createMockLLM({ responses: { assess_mood: VALID_JSON } });
     const activity = createActivity({ store: h.store, llm: mock });
     const first = await activity.llm(BASE_PARAMS);
     const second = await activity.llm(BASE_PARAMS);
@@ -169,7 +169,7 @@ describe("activity.llm — journal replay", () => {
   });
 
   it("marks the hit as replayed with the original sequence", async () => {
-    const mock = createMockLlm({ responses: { assess_mood: VALID_JSON } });
+    const mock = createMockLLM({ responses: { assess_mood: VALID_JSON } });
     const activity = createActivity({ store: h.store, llm: mock });
     const first = await activity.llm(BASE_PARAMS);
     const second = await activity.llm(BASE_PARAMS);
@@ -178,7 +178,7 @@ describe("activity.llm — journal replay", () => {
   });
 
   it("never writes a duplicate journal entry", async () => {
-    const mock = createMockLlm({ responses: { assess_mood: VALID_JSON } });
+    const mock = createMockLLM({ responses: { assess_mood: VALID_JSON } });
     const activity = createActivity({ store: h.store, llm: mock });
     await activity.llm(BASE_PARAMS);
     await activity.llm(BASE_PARAMS);
@@ -187,7 +187,7 @@ describe("activity.llm — journal replay", () => {
   });
 
   it("replays a journaled FAILURE without an API call — the halt is durable", async () => {
-    const mock = createMockLlm({ responses: { assess_mood: GARBAGE } });
+    const mock = createMockLLM({ responses: { assess_mood: GARBAGE } });
     const activity = createActivity({ store: h.store, llm: mock });
     await activity.llm(BASE_PARAMS); // 3 attempts, journals llm_call_failed
     const callsAfterFirst = mock.calls().length;
@@ -199,7 +199,7 @@ describe("activity.llm — journal replay", () => {
   });
 
   it("survives a projection wipe — the journal lives in the log", async () => {
-    const mock = createMockLlm({ responses: { assess_mood: VALID_JSON } });
+    const mock = createMockLLM({ responses: { assess_mood: VALID_JSON } });
     const activity = createActivity({ store: h.store, llm: mock });
     await activity.llm(BASE_PARAMS);
 
@@ -222,7 +222,7 @@ describe("activity.llm — journal replay", () => {
       result: { wrong: "shape" },
       attempts: 1,
     });
-    const mock = createMockLlm({ responses: { assess_mood: VALID_JSON } });
+    const mock = createMockLLM({ responses: { assess_mood: VALID_JSON } });
     const activity = createActivity({ store: h.store, llm: mock });
     await expect(activity.llm(BASE_PARAMS)).rejects.toThrow();
     expect(mock.calls()).toHaveLength(0);
@@ -233,7 +233,7 @@ describe("activity.llm — journal replay", () => {
 
 describe("activity.llm — journal keying", () => {
   it("a different purpose in the same tick is a fresh call", async () => {
-    const mock = createMockLlm({
+    const mock = createMockLLM({
       responses: { assess_mood: VALID_JSON, pick_action: VALID_JSON },
     });
     const activity = createActivity({ store: h.store, llm: mock });
@@ -243,7 +243,7 @@ describe("activity.llm — journal keying", () => {
   });
 
   it("a different tick with the same purpose is a fresh call", async () => {
-    const mock = createMockLlm({ responses: { assess_mood: VALID_JSON } });
+    const mock = createMockLLM({ responses: { assess_mood: VALID_JSON } });
     const activity = createActivity({ store: h.store, llm: mock });
     await activity.llm(BASE_PARAMS);
     await activity.llm({ ...BASE_PARAMS, tick: 1 });
@@ -251,7 +251,7 @@ describe("activity.llm — journal keying", () => {
   });
 
   it("a different agent with the same tick and purpose is a fresh call", async () => {
-    const mock = createMockLlm({ responses: { assess_mood: VALID_JSON } });
+    const mock = createMockLLM({ responses: { assess_mood: VALID_JSON } });
     const activity = createActivity({ store: h.store, llm: mock });
     await activity.llm(BASE_PARAMS);
     await activity.llm({ ...BASE_PARAMS, agentId: "klaus" });
@@ -263,7 +263,7 @@ describe("activity.llm — journal keying", () => {
 
 describe("activity.llm — retry and checkpoint-halt", () => {
   it("retries once after garbage output and completes", async () => {
-    const mock = createMockLlm({
+    const mock = createMockLLM({
       responses: { assess_mood: [GARBAGE, VALID_JSON] },
     });
     const activity = createActivity({ store: h.store, llm: mock });
@@ -273,7 +273,7 @@ describe("activity.llm — retry and checkpoint-halt", () => {
   });
 
   it("retries after valid-JSON-wrong-shape output too", async () => {
-    const mock = createMockLlm({
+    const mock = createMockLLM({
       responses: { assess_mood: [WRONG_SHAPE, VALID_JSON] },
     });
     const activity = createActivity({ store: h.store, llm: mock });
@@ -283,7 +283,7 @@ describe("activity.llm — retry and checkpoint-halt", () => {
   });
 
   it("journals the real attempt count", async () => {
-    const mock = createMockLlm({
+    const mock = createMockLLM({
       responses: { assess_mood: [GARBAGE, VALID_JSON] },
     });
     const activity = createActivity({ store: h.store, llm: mock });
@@ -292,7 +292,7 @@ describe("activity.llm — retry and checkpoint-halt", () => {
   });
 
   it("feeds the error back: retry prompt contains the original prompt and differs", async () => {
-    const mock = createMockLlm({
+    const mock = createMockLLM({
       responses: { assess_mood: [GARBAGE, VALID_JSON] },
     });
     const activity = createActivity({ store: h.store, llm: mock });
@@ -304,7 +304,7 @@ describe("activity.llm — retry and checkpoint-halt", () => {
   });
 
   it("feeds the validation error back on schema mismatch", async () => {
-    const mock = createMockLlm({
+    const mock = createMockLLM({
       responses: { assess_mood: [WRONG_SHAPE, VALID_JSON] },
     });
     const activity = createActivity({ store: h.store, llm: mock });
@@ -316,7 +316,7 @@ describe("activity.llm — retry and checkpoint-halt", () => {
   });
 
   it("halts after 3 attempts: resolves failed, never throws", async () => {
-    const mock = createMockLlm({ responses: { assess_mood: GARBAGE } });
+    const mock = createMockLLM({ responses: { assess_mood: GARBAGE } });
     const activity = createActivity({ store: h.store, llm: mock });
     const result = await activity.llm(BASE_PARAMS);
     expect(result.status).toBe("failed");
@@ -324,7 +324,7 @@ describe("activity.llm — retry and checkpoint-halt", () => {
   });
 
   it("never makes a 4th attempt even when it would succeed", async () => {
-    const mock = createMockLlm({
+    const mock = createMockLLM({
       responses: { assess_mood: [GARBAGE, GARBAGE, GARBAGE, VALID_JSON] },
     });
     const activity = createActivity({ store: h.store, llm: mock });
@@ -334,7 +334,7 @@ describe("activity.llm — retry and checkpoint-halt", () => {
   });
 
   it("journals llm_call_failed with one error per attempt", async () => {
-    const mock = createMockLlm({ responses: { assess_mood: GARBAGE } });
+    const mock = createMockLLM({ responses: { assess_mood: GARBAGE } });
     const activity = createActivity({ store: h.store, llm: mock });
     await activity.llm(BASE_PARAMS);
 
@@ -349,7 +349,7 @@ describe("activity.llm — retry and checkpoint-halt", () => {
   });
 
   it("writes no llm_call_completed on failure", async () => {
-    const mock = createMockLlm({ responses: { assess_mood: GARBAGE } });
+    const mock = createMockLLM({ responses: { assess_mood: GARBAGE } });
     const activity = createActivity({ store: h.store, llm: mock });
     await activity.llm(BASE_PARAMS);
     expect(completedEvents()).toHaveLength(0);
@@ -376,7 +376,7 @@ describe("activity.llm — retry and checkpoint-halt", () => {
     await expect(activityBefore.llm(BASE_PARAMS)).rejects.toThrow();
 
     // "Resume": same log, working client.
-    const mock = createMockLlm({ responses: { assess_mood: VALID_JSON } });
+    const mock = createMockLLM({ responses: { assess_mood: VALID_JSON } });
     const activityAfter = createActivity({ store: h.store, llm: mock });
     const result = await activityAfter.llm(BASE_PARAMS);
     expect(result).toMatchObject({ status: "completed", replayed: false });
@@ -401,7 +401,7 @@ describe("activity.llm — deriveEvents atomicity", () => {
   };
 
   it("appends derived events in the same transaction, journal entry first", async () => {
-    const mock = createMockLlm({ responses: { assess_mood: VALID_JSON } });
+    const mock = createMockLLM({ responses: { assess_mood: VALID_JSON } });
     const activity = createActivity({ store: h.store, llm: mock });
     await activity.llm(WITH_DERIVED);
 
@@ -417,7 +417,7 @@ describe("activity.llm — deriveEvents atomicity", () => {
   });
 
   it("rolls back the journal entry when a derived event is invalid", async () => {
-    const mock = createMockLlm({ responses: { assess_mood: VALID_JSON } });
+    const mock = createMockLLM({ responses: { assess_mood: VALID_JSON } });
     const activity = createActivity({ store: h.store, llm: mock });
     await expect(
       activity.llm({
@@ -433,7 +433,7 @@ describe("activity.llm — deriveEvents atomicity", () => {
   // the invariant is that the API gets called AGAIN — at-least-once calls,
   // exactly-once journaled effects.
   it("re-calls the API after a rolled-back journal write", async () => {
-    const mock = createMockLlm({ responses: { assess_mood: VALID_JSON } });
+    const mock = createMockLLM({ responses: { assess_mood: VALID_JSON } });
     const activity = createActivity({ store: h.store, llm: mock });
     await expect(
       activity.llm({ ...BASE_PARAMS, deriveEvents: () => [INVALID_EVENT] }),
@@ -446,7 +446,7 @@ describe("activity.llm — deriveEvents atomicity", () => {
   });
 
   it("does not re-derive on a journal hit", async () => {
-    const mock = createMockLlm({ responses: { assess_mood: VALID_JSON } });
+    const mock = createMockLLM({ responses: { assess_mood: VALID_JSON } });
     const activity = createActivity({ store: h.store, llm: mock });
     await activity.llm(WITH_DERIVED);
     const countAfterFirst = h.count();
@@ -461,7 +461,9 @@ describe("activity.llm — deriveEvents atomicity", () => {
 // M1 acceptance test 1: run a step → crash → resume: API called exactly once.
 describe("activity.llm — crash and resume", () => {
   it("a restarted process replays from the journal with zero API calls", async () => {
-    const mockBefore = createMockLlm({ responses: { assess_mood: VALID_JSON } });
+    const mockBefore = createMockLLM({
+      responses: { assess_mood: VALID_JSON },
+    });
     const activityBefore = createActivity({ store: h.store, llm: mockBefore });
     const first = await activityBefore.llm(BASE_PARAMS);
 
@@ -470,7 +472,9 @@ describe("activity.llm — crash and resume", () => {
 
     const db = initDB({ dbPath: h.dbPath });
     try {
-      const mockAfter = createMockLlm({ responses: { assess_mood: VALID_JSON } });
+      const mockAfter = createMockLLM({
+        responses: { assess_mood: VALID_JSON },
+      });
       const activityAfter = createActivity({
         store: initStore(db),
         llm: mockAfter,
@@ -495,7 +499,7 @@ describe("activity.llm — crash and resume", () => {
 // failures visible in the log as events.
 describe("activity.llm — chaos", () => {
   it("500 ticks at chaosRate 0.5: no exceptions, every outcome journaled", async () => {
-    const mock = createMockLlm({
+    const mock = createMockLLM({
       responses: { chaos_step: '{"ok":true}' },
       chaosRate: 0.5,
       seed: 7,
@@ -528,8 +532,6 @@ describe("activity.llm — chaos", () => {
     expect(failedEvents()).toHaveLength(failed);
 
     // The retry path was exercised: some call recovered on attempt 2 or 3.
-    expect(
-      completedEvents().some((event) => event.attempts > 1),
-    ).toBe(true);
+    expect(completedEvents().some((event) => event.attempts > 1)).toBe(true);
   });
 });
