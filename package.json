@@ -7,11 +7,11 @@
     "node": ">=24"
   },
   "scripts": {
+    "compile": "tsc",
     "db:drop": "rm -rf ./db",
     "start": "node src/main.ts",
     "tail": "node src/tail.ts",
-    "test": "vitest run",
-    "typecheck": "tsc"
+    "test": "vitest run"
   },
   "keywords": [
     "agent-harness"
