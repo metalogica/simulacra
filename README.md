@@ -4,7 +4,7 @@
 A crash-safe generative agent runtime built from first principles using an event-sourced, durable-execution core with a functional shell and flat modules. Nothing fancy. Framework-free. Minimal runtime dependencies. All in your terminal. Not a single GUI.
 
 **Why did I build it?**
-I wanted to develop my understadning of both distributed systems and AI agent harness engineering through a focussed example derived form an academic paper that I find genuinly fascinating: [Park et al. (2023)](https://arxiv.org/pdf/2304.03442)'s famous study of simulated agent societies.
+I wanted to develop my understanding of both distributed systems and AI agent harness engineering through a focussed example derived form an academic paper that I find genuinly fascinating: [Park et al. (2023)](https://arxiv.org/pdf/2304.03442)'s famous study of simulated agent societies.
 
 **What is the opportunity?**
 Their paper defined the architecture of believable agents — memory stream, reflection, planning — but did not address specific implementation details. This project is a first-principles implementation of their system built as a durable execution runtime that survives kill -9 mid-thought, never re-runs a side effect, and never loses a memory.
