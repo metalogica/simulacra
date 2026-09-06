@@ -100,8 +100,7 @@ export const initDB = (input: InitDBParams = {}): BetterSqlite3.Database => {
         sequence INTEGER PRIMARY KEY,
         agent_id TEXT NOT NULL,
         content TEXT NOT NULL,
-        importance INTEGER NOT NULL,
-        last_retrieved_tick INTEGER
+        importance INTEGER NOT NULL
       ) STRICT;
     `,
     ).run();

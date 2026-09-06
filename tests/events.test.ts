@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { agentEventSchema, storedEventSchema } from "../src/events.ts";
 import {
+  EMBEDDING_COMPUTED,
   LLM_CALL_COMPLETED,
   LLM_CALL_FAILED,
   OBSERVATION,
@@ -188,5 +189,110 @@ describe("storedEventSchema — what comes out", () => {
 
   it("rejects a row with no sequence", () => {
     expect(storedEventSchema.safeParse(OBSERVATION).success).toBe(false);
+  });
+});
+
+// ─── M2: embedding events ────────────────────────────────────────────────────
+// embedding_computed: { agentId, tick, type, memorySequence: int > 0,
+//   model: string(min 1), vector: number[](min 1, every element finite) }
+//
+// The vector length is deliberately NOT fixed by the schema. The dimension is
+// a provider decision (DECISIONS.md § M2); a mismatch surfaces as a thrown
+// error in cosineSimilarity, not as a schema rejection of a valid log row.
+
+describe("agentEventSchema — embedding_computed (M2)", () => {
+  it("accepts an embedding_computed", () => {
+    expect(agentEventSchema.safeParse(EMBEDDING_COMPUTED).success).toBe(true);
+  });
+
+  it("rejects an empty vector", () => {
+    expect(
+      agentEventSchema.safeParse({ ...EMBEDDING_COMPUTED, vector: [] }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a non-finite element", () => {
+    expect(
+      agentEventSchema.safeParse({
+        ...EMBEDDING_COMPUTED,
+        vector: [0.6, Number.NaN],
+      }).success,
+    ).toBe(false);
+    expect(
+      agentEventSchema.safeParse({
+        ...EMBEDDING_COMPUTED,
+        vector: [0.6, Number.POSITIVE_INFINITY],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a non-numeric element", () => {
+    expect(
+      agentEventSchema.safeParse({
+        ...EMBEDDING_COMPUTED,
+        vector: [0.6, "0.8"],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects memorySequence 0 — sequences start at 1", () => {
+    expect(
+      agentEventSchema.safeParse({ ...EMBEDDING_COMPUTED, memorySequence: 0 })
+        .success,
+    ).toBe(false);
+  });
+
+  it("rejects a fractional memorySequence", () => {
+    expect(
+      agentEventSchema.safeParse({ ...EMBEDDING_COMPUTED, memorySequence: 1.5 })
+        .success,
+    ).toBe(false);
+  });
+
+  it("rejects an empty model", () => {
+    expect(
+      agentEventSchema.safeParse({ ...EMBEDDING_COMPUTED, model: "" }).success,
+    ).toBe(false);
+  });
+
+  it("rejects unknown keys — strictObject holds", () => {
+    expect(
+      agentEventSchema.safeParse({ ...EMBEDDING_COMPUTED, smuggled: true })
+        .success,
+    ).toBe(false);
+  });
+
+  it("rejects a caller-supplied sequence", () => {
+    expect(
+      agentEventSchema.safeParse({ ...EMBEDDING_COMPUTED, ...STORED_FIELDS })
+        .success,
+    ).toBe(false);
+  });
+});
+
+describe("storedEventSchema — embedding_computed (M2)", () => {
+  it("accepts a stored embedding_computed", () => {
+    expect(
+      storedEventSchema.safeParse({ ...EMBEDDING_COMPUTED, ...STORED_FIELDS })
+        .success,
+    ).toBe(true);
+  });
+});
+
+// A gap left open in M0: pointerSequences accepted any positive number, so a
+// pointer of 1.5 validated. Sequences are integers; say so in the schema.
+describe("reflection pointers are integers (M0 gap, closed in M2)", () => {
+  it("rejects a fractional pointer sequence", () => {
+    expect(
+      agentEventSchema.safeParse({ ...REFLECTION, pointerSequences: [1.5] })
+        .success,
+    ).toBe(false);
+  });
+
+  it("rejects a zero pointer sequence", () => {
+    expect(
+      agentEventSchema.safeParse({ ...REFLECTION, pointerSequences: [0] })
+        .success,
+    ).toBe(false);
   });
 });

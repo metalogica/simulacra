@@ -88,3 +88,151 @@ describe("read-only connections", () => {
     reader.close();
   });
 });
+
+// ─── M2: projection_memories schema ──────────────────────────────────────────
+// Columns after M2: sequence, agent_id, tick, content, importance,
+// embedding (BLOB, nullable), embedding_model (TEXT, nullable).
+//
+// There is no migration framework (DECISIONS.md § M0). Instead: on open, if
+// the projection table exists with a different column set, DROP it and
+// recreate. Projections are disposable by law; replay() rebuilds them. The
+// events table is never touched by this path.
+
+import Database from "better-sqlite3";
+import { emptyDbPath } from "./helpers.ts";
+
+interface ColumnInfo {
+  name: string;
+  notnull: number;
+  type: string;
+}
+
+const columnsOf = (
+  db: { pragma: (sql: string) => unknown },
+  table: string,
+): ColumnInfo[] => db.pragma(`table_info(${table})`) as ColumnInfo[];
+
+const columnNames = (db: { pragma: (sql: string) => unknown }): string[] =>
+  columnsOf(db, "projection_memories")
+    .map((column) => column.name)
+    .sort();
+
+describe("projection_memories schema (M2)", () => {
+  it("carries exactly the columns retrieval reads", () => {
+    h = freshDb();
+    expect(columnNames(h.db)).toEqual(
+      [
+        "sequence",
+        "agent_id",
+        "tick",
+        "content",
+        "importance",
+        "embedding",
+        "embedding_model",
+      ].sort(),
+    );
+  });
+
+  it("no longer carries last_retrieved_tick — recency reads the creation tick", () => {
+    h = freshDb();
+    expect(columnNames(h.db)).not.toContain("last_retrieved_tick");
+  });
+
+  it("requires a tick on every memory row", () => {
+    h = freshDb();
+    expect(() =>
+      h.db
+        .prepare(
+          `INSERT INTO projection_memories (sequence, agent_id, content, importance)
+           VALUES (1, 'maria', 'x', 4)`,
+        )
+        .run(),
+    ).toThrow(/NOT NULL/i);
+  });
+
+  it("allows a memory row with no embedding yet", () => {
+    h = freshDb();
+    expect(() =>
+      h.db
+        .prepare(
+          `INSERT INTO projection_memories (sequence, agent_id, tick, content, importance)
+           VALUES (1, 'maria', 0, 'x', 4)`,
+        )
+        .run(),
+    ).not.toThrow();
+  });
+
+  it("stores the embedding as a BLOB and reads it back byte-identical", () => {
+    h = freshDb();
+    const blob = Buffer.from([0, 0, 128, 63, 0, 0, 32, 192]);
+    h.db
+      .prepare(
+        `INSERT INTO projection_memories (sequence, agent_id, tick, content, importance, embedding, embedding_model)
+         VALUES (1, 'maria', 0, 'x', 4, @blob, 'mock')`,
+      )
+      .run({ blob });
+    const row = h.db
+      .prepare("SELECT embedding FROM projection_memories WHERE sequence = 1")
+      .get() as { embedding: Buffer };
+    expect(Buffer.isBuffer(row.embedding)).toBe(true);
+    expect(row.embedding.equals(blob)).toBe(true);
+  });
+
+  it("drops and recreates a stale projection table on open — projections are disposable", () => {
+    const { dbPath, cleanup } = emptyDbPath();
+    try {
+      // A database left behind by the M1 schema.
+      const legacy = new Database(dbPath);
+      legacy.exec(`
+        CREATE TABLE projection_memories (
+          sequence INTEGER PRIMARY KEY,
+          agent_id TEXT NOT NULL,
+          content TEXT NOT NULL,
+          importance INTEGER NOT NULL,
+          last_retrieved_tick INTEGER
+        ) STRICT;
+      `);
+      legacy
+        .prepare(
+          "INSERT INTO projection_memories VALUES (1, 'maria', 'stale', 4, NULL)",
+        )
+        .run();
+      legacy.close();
+
+      const db = initDB({ dbPath });
+      try {
+        expect(columnNames(db)).toContain("embedding");
+        expect(columnNames(db)).not.toContain("last_retrieved_tick");
+        const { n } = db
+          .prepare("SELECT COUNT(*) AS n FROM projection_memories")
+          .get() as { n: number };
+        expect(n).toBe(0);
+      } finally {
+        db.close();
+      }
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("leaves an up-to-date projection table alone on reopen", () => {
+    h = freshDb();
+    h.db
+      .prepare(
+        `INSERT INTO projection_memories (sequence, agent_id, tick, content, importance)
+         VALUES (1, 'maria', 0, 'kept', 4)`,
+      )
+      .run();
+    h.db.close();
+
+    const second = initDB({ dbPath: h.dbPath });
+    try {
+      const { n } = second
+        .prepare("SELECT COUNT(*) AS n FROM projection_memories")
+        .get() as { n: number };
+      expect(n).toBe(1);
+    } finally {
+      second.close();
+    }
+  });
+});

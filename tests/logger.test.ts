@@ -165,3 +165,45 @@ describe("formatEvent — journal events (M1)", () => {
     expect(formatEvent(LLM_FAILED)).not.toContain("\n");
   });
 });
+
+// ─── M2: embedding events, and journal lines a human can read ────────────────
+
+const EMBEDDING_STORED: StoredEvent = {
+  type: "embedding_computed",
+  agentId: "maria",
+  tick: 0,
+  memorySequence: 12345,
+  model: "mock",
+  vector: [0.6, 0.8],
+  sequence: 46,
+  createdAt: 1_786_914_071_800,
+};
+
+describe("formatEvent — embedding events (M2)", () => {
+  it("renders an embedding_computed with its model and target memory", () => {
+    const line = stripAnsi(formatEvent(EMBEDDING_STORED));
+    expect(line).toContain("embedding_computed");
+    expect(line).toContain("mock");
+    expect(line).toContain("12345");
+  });
+
+  it("does not dump the vector — hundreds of floats would drown the tail", () => {
+    const line = stripAnsi(formatEvent(EMBEDDING_STORED));
+    expect(line).not.toMatch(/0\.6/);
+    expect(line).not.toContain("\n");
+  });
+});
+
+describe("formatEvent — journal lines are readable (M1 gap, closed in M2)", () => {
+  it("separates attempts, prompt, purpose and result", () => {
+    // Today the fields are glued together:
+    //   1Rate the importance of this observation from 1 to 10.score_importance{"score":7}
+    // A digit running straight into a letter, or the purpose running into
+    // the result, means two fields have no separator between them.
+    for (const event of [LLM_COMPLETED, LLM_FAILED]) {
+      const line = stripAnsi(formatEvent(event));
+      expect(line).not.toMatch(/\d[A-Za-z]/);
+      expect(line).not.toMatch(/score_importance[{[]/);
+    }
+  });
+});

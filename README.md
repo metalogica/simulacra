@@ -4,7 +4,7 @@
 A crash-safe generative agent runtime built from first principles using an event-sourced, durable-execution core with a functional shell and flat modules. Nothing fancy. Framework-free. Minimal runtime dependencies. All in your terminal. Not a single GUI.
 
 **Why did I build it?**
-I wanted to develop my understanding of both distributed systems and AI agent harness engineering through a focussed example derived form an academic paper that I find genuinly fascinating: [Park et al. (2023)](https://arxiv.org/pdf/2304.03442)'s famous study of simulated agent societies.
+I wanted to develop my understanding of both distributed systems and AI agent harness engineering through a focussed example derived from an academic paper that I find genuinely fascinating: [Park et al. (2023)](https://arxiv.org/pdf/2304.03442)'s famous study of simulated agent societies.
 
 **What is the opportunity?**
 Their paper defined the architecture of believable agents — memory stream, reflection, planning — but did not address specific implementation details. This project is a first-principles implementation of their system built as a durable execution runtime that survives kill -9 mid-thought, never re-runs a side effect, and never loses a memory.
@@ -73,10 +73,10 @@ sequenceDiagram
 
 ## 2. Architecture
 
-### 1.1 System Principles
+### 2.1 System Principles
 * Event-sourcing: immutable append-only log as a source of truth
   * One journal table `events` that records 1) in-world events 2) effect receipts.
-  * One projection table `projection_memories` to determistically rebuild in-world events from the event store on replay.
+  * One projection table `projection_memories` to deterministically rebuild in-world events from the event store on replay.
 * Read side: CQRS-lite
   * Two composition roots in the project
     * `main.ts` is the write-side
@@ -84,20 +84,21 @@ sequenceDiagram
 * Execution: Durable Execution & Journalled Effects
   * Temporal `workflow` / `activity` split with receipts, at-least-once calls, and exactly-once effects.
 * Module layout: functional core, imperative shell
-  * flat file heirarchy
-  * pure factory function DI (it's not poor if its's done with love)
+  * flat file hierarchy
+  * pure factory function DI (it's not poor if it's done with love)
 
-### 3.1 System Invariants
+### 2.2 System Invariants
 * Log law: anything that is content or happened goes in the log, forever, immutable. Reflections and plans are events, not projection rows.
 * Projection law: anything in a projection must be fully re-derivable by `projection.replay()`. If deleting projections loses information, the design failed.
 * The Side-Effect Law: the LLM call is a side effect. Before every call, look up the journal (`llm_call_completed` for this (`agent_id`, `tick`, `purpose`)); if found, use the journaled response. Replay moves forward and skips. No transactional rollbacks.
 
-### 3.3. Tech Stack
+### 2.3 Tech Stack
 
 * Persistence: Sqlite3
-* Runtime: Node (Node 22 + Native TS 7.0)
+* Runtime: Node 24, running TypeScript directly (native type stripping, TS 7)
   * `zod` for domain event modelling
-  * `bettersqlite` for DB adapter
+  * `better-sqlite3` for the DB adapter
+* Model access: OpenRouter over raw `fetch` (chat completions and embeddings), no SDK
 
 ## 3. C4 Model
 
@@ -106,7 +107,7 @@ sequenceDiagram
 flowchart LR
   operator(["Operator<br/><i>runs, kills, watches</i>"])
   simulacra["<b>Simulacra</b><br/>Crash-safe generative<br/>agent runtime"]
-  provider["<b>LLM Provider</b><br/><i>External system</i><br/>Anthropic API"]
+  provider["<b>LLM Provider</b><br/><i>External system</i><br/>OpenRouter"]
 
   operator -->|"starts a run, kill -9s it,<br/>tails the log"| simulacra
   simulacra -->|"completes prompts<br/><b>the only nondeterminism</b>"| provider

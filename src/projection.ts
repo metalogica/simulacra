@@ -7,12 +7,11 @@ import type { StoredEvent } from "./events.ts";
 import { initStore } from "./store.ts";
 import type BetterSqlite3 from "better-sqlite3";
 
-interface MemoryRow {
+export interface MemoryRow {
   sequence: number;
   agent_id: string;
   content: string;
   importance: number;
-  last_retrieved_tick: number | null;
 }
 
 interface InsertParams {
@@ -20,7 +19,6 @@ interface InsertParams {
   agent_id: string;
   content: string;
   importance: number;
-  last_retrieved_tick: number | null;
 }
 
 interface DeleteParams {
@@ -34,7 +32,6 @@ export const toMemoryRow = (storeEvent: StoredEvent): MemoryRow | null => {
         agent_id: storeEvent.agentId,
         content: storeEvent.content,
         importance: storeEvent.importance,
-        last_retrieved_tick: null,
         sequence: storeEvent.sequence,
       };
     case "reflection":
@@ -42,7 +39,6 @@ export const toMemoryRow = (storeEvent: StoredEvent): MemoryRow | null => {
         agent_id: storeEvent.agentId,
         content: storeEvent.content,
         importance: storeEvent.importance,
-        last_retrieved_tick: null,
         sequence: storeEvent.sequence,
       };
     case "llm_call_completed":
@@ -73,8 +69,8 @@ export const replay = (
   `);
 
   const insertQuery = db.prepare<InsertParams>(/*sql*/ `
-    INSERT INTO projection_memories (sequence, agent_id, content, importance, last_retrieved_tick)
-    VALUES (@sequence, @agent_id, @content, @importance, @last_retrieved_tick)
+    INSERT INTO projection_memories (sequence, agent_id, content, importance)
+    VALUES (@sequence, @agent_id, @content, @importance)
   `);
 
   const transaction = db.transaction(() => {

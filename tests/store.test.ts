@@ -201,3 +201,95 @@ describe("read filters: tick and type (M1)", () => {
     expect(h.store.read()).toHaveLength(4);
   });
 });
+
+// ─── M2: transaction ─────────────────────────────────────────────────────────
+// Store grows `transaction<T>(fn: () => T): T`.
+//   - Every append inside `fn` commits together, or none of them do.
+//   - Returns fn's value. A throw inside rolls back and propagates.
+//   - Nests: an inner transaction joins the outer one (SQLite savepoints).
+//   - appendMany is expressible as transaction(() => events.map(append)).
+// It exists so a later append can reference an earlier one's sequence
+// within a single atomic commit — embedding_computed → observation.
+
+describe("transaction (M2)", () => {
+  it("returns the callback's value", () => {
+    expect(h.store.transaction(() => 42)).toBe(42);
+  });
+
+  it("commits every append made inside", () => {
+    h.store.transaction(() => {
+      h.store.append(OBSERVATION);
+      h.store.append(KLAUS_OBSERVATION);
+    });
+    expect(h.count()).toBe(2);
+  });
+
+  it("lets a later append reference an earlier sequence — the reason it exists", () => {
+    const pointer = h.store.transaction(() => {
+      const sequence = h.store.append(OBSERVATION);
+      h.store.append({ ...REFLECTION, pointerSequences: [sequence] });
+      return sequence;
+    });
+    const reflection = h.store.read().find((e) => e.type === "reflection");
+    if (reflection?.type !== "reflection") {
+      throw new Error("expected a reflection");
+    }
+    expect(reflection.pointerSequences).toEqual([pointer]);
+    expect(reflection.sequence).toBe(pointer + 1);
+  });
+
+  it("rolls back every append when the callback throws, and rethrows", () => {
+    expect(() =>
+      h.store.transaction(() => {
+        h.store.append(OBSERVATION);
+        h.store.append(KLAUS_OBSERVATION);
+        throw new Error("abort");
+      }),
+    ).toThrow("abort");
+    expect(h.count()).toBe(0);
+  });
+
+  it("rolls back when an append inside fails validation", () => {
+    expect(() =>
+      h.store.transaction(() => {
+        h.store.append(OBSERVATION);
+        h.store.append(INVALID_EVENT);
+      }),
+    ).toThrow();
+    expect(h.count()).toBe(0);
+  });
+
+  it("nests: an inner transaction commits with the outer", () => {
+    h.store.transaction(() => {
+      h.store.append(OBSERVATION);
+      h.store.transaction(() => {
+        h.store.append(KLAUS_OBSERVATION);
+      });
+    });
+    expect(h.count()).toBe(2);
+  });
+
+  it("nests: an outer throw rolls back the inner appends too", () => {
+    expect(() =>
+      h.store.transaction(() => {
+        h.store.append(OBSERVATION);
+        h.store.transaction(() => {
+          h.store.append(KLAUS_OBSERVATION);
+        });
+        throw new Error("abort");
+      }),
+    ).toThrow("abort");
+    expect(h.count()).toBe(0);
+  });
+
+  it("leaves the store usable after a rollback", () => {
+    expect(() =>
+      h.store.transaction(() => {
+        h.store.append(OBSERVATION);
+        throw new Error("abort");
+      }),
+    ).toThrow();
+    h.store.append(OBSERVATION);
+    expect(h.count()).toBe(1);
+  });
+});

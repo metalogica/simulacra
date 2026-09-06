@@ -31,9 +31,11 @@ export interface Harness {
 export interface MemoryProjectionRow {
   sequence: number;
   agent_id: string;
+  tick: number;
   content: string;
   importance: number;
-  last_retrieved_tick: number | null;
+  embedding: Buffer | null;
+  embedding_model: string | null;
 }
 
 let harnessCounter = 0;
@@ -150,3 +152,18 @@ export const observations = (n: number, agentId = "maria"): AgentEvent[] =>
     content: `observation number ${i}`,
     importance: (i % 10) + 1,
   }));
+
+// ─── M2 fixtures ─────────────────────────────────────────────────────────────
+
+/**
+ * An embedding for the memory at sequence 1. The vector is a unit vector on
+ * purpose (0.6² + 0.8² = 1) so cosine assertions read cleanly.
+ */
+export const EMBEDDING_COMPUTED = {
+  type: "embedding_computed",
+  agentId: "maria",
+  tick: 0,
+  memorySequence: 1,
+  model: "mock",
+  vector: [0.6, 0.8],
+} satisfies AgentEvent;
