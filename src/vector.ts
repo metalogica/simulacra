@@ -12,7 +12,19 @@
  */
 import { todo } from "./todo.ts";
 
-export const dot = (a: Float32Array, b: Float32Array): number => todo(a, b);
+export const dot = (a: Float32Array, b: Float32Array): number => {
+  let sum = 0;
+
+  if (a.length !== b.length) {
+    throw new Error("Input vectors are not the same length.");
+  }
+
+  for (let i = 0; i < b.length; i += 1) {
+    sum += a[i] * b[i];
+  }
+
+  return sum;
+};
 
 export const norm = (a: Float32Array): number => todo(a);
 
