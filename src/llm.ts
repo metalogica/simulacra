@@ -1,3 +1,5 @@
+import { mulberry32 } from "./prng.ts";
+
 const DEFAULT_SEED = 1;
 const DEFAULT_CHAOS_RATE = 0;
 const DEFAULT_INVALID_OUTPUT = "{{{{{GARBLEDJSON" as string;
@@ -19,39 +21,6 @@ interface CreateMockLLMInput {
   responses: Record<string, string | string[]>;
   chaosRate?: number;
   seed?: number;
-}
-
-/**
- * Implementation Details:
- * - 0x6d2b79f5 (The Increment / Fractional Golden Ratio):
- *   - Guarantees a full period length of 2^32 (4.29 billion calls.
- * - OFFSET (1-3):
- *   - Used to eliminate statistical clustering on outputs.
- * - Normalization Range: [0 to 4294967295]
- */
-function* crateMulberry32(seed: number): Generator {
-  if (Number.isNaN(seed)) {
-    throw new Error(
-      "Mock LLM Client: received NaN instead of a integer seed value for mulberry 32 input",
-    );
-  }
-
-  const NORMALIZATION_INTEGER = 4294967296;
-  const OFFSET_1 = 15;
-  const OFFSET_2 = 7;
-  const OFFSET_3 = 14;
-
-  let state = seed >>> 0;
-
-  while (true) {
-    state = (state + 0x6d2b79f5) | 0;
-
-    let t = Math.imul(state ^ (state >>> OFFSET_1), 1 | state);
-
-    t = (t + Math.imul(t ^ (t >>> OFFSET_2), 61 | t)) ^ t;
-
-    yield ((t ^ (t >>> OFFSET_3)) >>> 0) / NORMALIZATION_INTEGER;
-  }
 }
 
 const createResponsePicker = (response: string | string[]): (() => string) => {
@@ -79,7 +48,7 @@ export const createMockLLM = (input: CreateMockLLMInput): MockLLM => {
   } = input;
 
   const recordedCalls: CallDetailRecord[] = [];
-  const mulberry32 = crateMulberry32(seed);
+  const generateRandomInt = mulberry32(seed);
 
   const pickers = new Map<string, () => string>();
   for (const [purpose, response] of Object.entries(responses)) {
@@ -95,7 +64,7 @@ export const createMockLLM = (input: CreateMockLLMInput): MockLLM => {
 
     recordedCalls.push({ purpose, prompt });
 
-    const randomInt = mulberry32.next().value;
+    const randomInt = generateRandomInt();
     if (randomInt < chaosRate) {
       return DEFAULT_INVALID_OUTPUT;
     }

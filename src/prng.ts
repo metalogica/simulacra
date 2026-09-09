@@ -1,13 +1,8 @@
-// TODO
-//  `src/llm.ts` carries an inline generator version of
-//  * this same algorithm; once this module is green, point the mock at it and
-//  * delete the duplicate.
-
 /**
  * Mulberry32 — a 32-bit seeded pseudo-random number generator that outputs [0, 1).
  *
  * @module
- * The sour of determinism in the system. Every random draw inside the runtime
+ * The source of determinism in the system. Every random draw inside the runtime
  * must come from a seed, never from `Math.random()` otherwise a run cannot be reproduced.
  */
 
@@ -22,6 +17,8 @@ export const mulberry32 = (seed: number): Random => {
   let state = seed >>> 0;
 
   return () => {
+    // 0x6d2b79f5 (The Increment / Fractional Golden Ratio):
+    // - Guarantees a full period length of 2^32 (4.29 billion calls).
     state = (state + 0x6d2b79f5) | 0;
 
     const a = state >>> 15;
