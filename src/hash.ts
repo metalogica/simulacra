@@ -11,6 +11,19 @@
  * - Multiplication wraps at 32 bits (`Math.imul`); the result is unsigned
  *   (`>>> 0`), so the return value is an integer in [0, 2^32).
  */
-import { todo } from "./todo.ts";
 
-export const fnv1a = (text: string): number => todo(text);
+const OFFSET_BASIS = 0x811c9dc5;
+const PRIME = 0x01000193;
+
+export const fnv1a = (text: string): number => {
+  const bytes = new TextEncoder().encode(text);
+  let hash = OFFSET_BASIS;
+
+  for (const byte of bytes) {
+    hash = Math.imul(hash ^ byte, PRIME);
+  }
+
+  const unsignedHash = hash >>> 0;
+
+  return unsignedHash;
+};

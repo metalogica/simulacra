@@ -26,7 +26,13 @@ describe("fnv1a", () => {
   });
 
   it("returns an unsigned 32-bit integer", () => {
-    for (const text of ["", "a", "zzzzzzzzzzzzzzzz", "!z.,;.zzp[l339", "日本語"]) {
+    for (const text of [
+      "",
+      "a",
+      "zzzzzzzzzzzzzzzz",
+      "!z.,;.zzp[l339",
+      "日本語",
+    ]) {
       const hash = fnv1a(text);
       expect(Number.isInteger(hash)).toBe(true);
       expect(hash).toBeGreaterThanOrEqual(0);
