@@ -5,7 +5,13 @@
  * Float32 carries ~7 significant digits, so equality is `toBeCloseTo(…, 5)`.
  */
 import { describe, expect, it } from "vitest";
-import { centre, cosineSimilarity, dot, norm, normalize } from "../src/vector.ts";
+import {
+  centre,
+  cosineSimilarity,
+  dot,
+  norm,
+  normalize,
+} from "../src/vector.ts";
 
 const f = (...xs: number[]): Float32Array => Float32Array.from(xs);
 
