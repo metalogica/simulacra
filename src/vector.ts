@@ -65,5 +65,23 @@ export const centre = (v1: Float32Array): Float32Array => {
   return v2;
 };
 
-export const cosineSimilarity = (a: Float32Array, b: Float32Array): number =>
-  todo(a, b);
+export const cosineSimilarity = (a: Float32Array, b: Float32Array): number => {
+  if (a.length !== b.length) {
+    throw new Error("Vectors A and B are not equal length.");
+  }
+
+  const magnitudeA = norm(a);
+  if (magnitudeA === 0) {
+    throw new Error("Vector A is 0-d");
+  }
+
+  const magnitudeB = norm(b);
+  if (magnitudeB === 0) {
+    throw new Error("Vactor B is 0-d");
+  }
+
+  const numerator = dot(a, b);
+  const denominator = magnitudeA * magnitudeB;
+
+  return numerator / denominator;
+};
