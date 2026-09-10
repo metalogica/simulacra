@@ -20,13 +20,21 @@ export const dot = (a: Float32Array, b: Float32Array): number => {
   }
 
   for (let i = 0; i < b.length; i += 1) {
-    sum += a[i] * b[i];
+    sum += a[i]! * b[i]!;
   }
 
   return sum;
 };
 
-export const norm = (a: Float32Array): number => todo(a);
+export const norm = (v: Float32Array): number => {
+  let sum = 0;
+
+  for (const i of v) {
+    sum += i ** 2;
+  }
+
+  return Math.sqrt(sum);
+};
 
 export const normalize = (a: Float32Array): Float32Array => todo(a);
 
