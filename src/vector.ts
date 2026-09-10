@@ -52,7 +52,18 @@ export const normalize = (a: Float32Array): Float32Array => {
   return normalized;
 };
 
-export const centre = (a: Float32Array): Float32Array => todo(a);
+export const centre = (v1: Float32Array): Float32Array => {
+  const sum = v1.reduce((sum, value) => (sum += value), 0);
+
+  const mean = sum / v1.length;
+
+  const v2 = new Float32Array(v1.length);
+  for (let i = 0; i < v2.length; i++) {
+    v2[i] = v1[i]! - mean;
+  }
+
+  return v2;
+};
 
 export const cosineSimilarity = (a: Float32Array, b: Float32Array): number =>
   todo(a, b);
