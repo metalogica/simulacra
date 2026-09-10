@@ -10,7 +10,6 @@
  * - `cosineSimilarity(a, b)` = dot(a, b) / (norm(a) · norm(b)); throws when
  *   either norm is 0.
  */
-import { todo } from "./todo.ts";
 
 export const dot = (a: Float32Array, b: Float32Array): number => {
   let sum = 0;
