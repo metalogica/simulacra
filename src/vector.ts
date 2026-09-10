@@ -36,7 +36,17 @@ export const norm = (v: Float32Array): number => {
   return Math.sqrt(sum);
 };
 
-export const normalize = (a: Float32Array): Float32Array => todo(a);
+export const normalize = (a: Float32Array): Float32Array => {
+  const magnitude = norm(a);
+  if (magnitude == 0) {
+    throw new Error("Cannot normalize a 0-dimensional vector");
+  }
+  const normalized = new Float32Array(a.length);
+  for (let i = 0; i < a.length; i += 1) {
+    normalized[i] = a[i]! / magnitude;
+  }
+  return normalized;
+};
 
 export const centre = (a: Float32Array): Float32Array => todo(a);
 
